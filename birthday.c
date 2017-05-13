@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,6 +7,8 @@
 // check each home dir for .birthday file
     // collect matches
 // print matches
+
+const char DEBUG = 0;
 
 
 char valid_date(char *date) {
@@ -20,6 +23,7 @@ char valid_date(char *date) {
 }
 
 void process_args(const int argc, char *argv[], char *month_day) {
+  // TODO consider returning error info and dispatching error messages by code.
   time_t now;
   struct tm *utc;
   if (argc == 1) {
@@ -40,11 +44,22 @@ void process_args(const int argc, char *argv[], char *month_day) {
   }
 }
 
+int homedir_selector(const struct dirent * directory) {
+  return 1;
+}
+
 int main(int argc, char *argv[]) {
   char month_day[5];
+  int num_directories;
+  struct dirent **namelist;
 
   process_args(argc, argv, month_day);
-  puts(month_day);
+  if (DEBUG) {
+    puts(month_day);
+  }
+
+  num_directories = scandir("/home", &namelist, homedir_selector, alphasort);
+  fprintf(stderr, "%d\n", num_directories);
 
   return 0;
 }
