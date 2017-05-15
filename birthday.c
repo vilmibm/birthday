@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 // check each home dir for .birthday file
     // collect matches
@@ -45,21 +46,51 @@ void process_args(const int argc, char *argv[], char *month_day) {
 }
 
 int homedir_selector(const struct dirent * directory) {
-  return 1;
+  char path[40];
+  sprintf(path, "/home/%s/.birthday", directory->d_name);
+  if (DEBUG) fprintf(stderr, "%s\n", path);
+  return access(path, R_OK) != -1;
 }
 
 int main(int argc, char *argv[]) {
   char month_day[5];
   int num_directories;
+  int directory_ix = 0;
   struct dirent **namelist;
 
   process_args(argc, argv, month_day);
-  if (DEBUG) {
-    puts(month_day);
-  }
+  if (DEBUG) fprintf(stderr, "%s\n", month_day);
 
   num_directories = scandir("/home", &namelist, homedir_selector, alphasort);
-  fprintf(stderr, "%d\n", num_directories);
+  if (DEBUG) fprintf(stderr, "found %d directories\n", num_directories);
+
+  if (num_directories == 0) return 0;
+
+  char path[40];
+  FILE *file;
+  char c;
+  int monthday_ix;
+  while (directory_ix < num_directories) {
+    sprintf(path, "/home/%s/.birthday", namelist[directory_ix]->d_name);
+    if (DEBUG) fprintf(stderr, "checking %s\n", path);
+    file = fopen(path, "r");
+    if (file) {
+      monthday_ix = 0;
+      while ((c = getc(file)) != EOF) {
+        if (c == month_day[monthday_ix]) {
+          monthday_ix++;
+        }
+        else {
+          break;
+        }
+      }
+      if (monthday_ix == strlen(month_day)) {
+        fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
+      }
+      fclose(file);
+    }
+    directory_ix++;
+  }
 
   return 0;
 }
