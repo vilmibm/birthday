@@ -40,7 +40,6 @@ void process_args(const int argc, char *argv[],
      today's month/day values (in UTC) or parses the given month/day and
      populates the struct with that.
    */
-  // TODO consider returning error info and dispatching error messages by code.
   time_t now;
   struct tm *utc;
   if (argc == 1) {
