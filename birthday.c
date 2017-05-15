@@ -5,16 +5,17 @@
 #include <time.h>
 #include <unistd.h>
 
+#define debug(format, ...) if (DEBUG) { fprintf(stderr, format, __VA_ARGS__); puts(""); }
+
 const int MAX_PATH_LENGTH = 40;
 const int MAX_MONTHDAY_LENGTH = 5;
 
-const char DEBUG = 0;
+const char DEBUG = 1;
 
 struct monthday {
   int month;
   int day;
 };
-
 
 char parse_date(char *date, struct monthday * md) {
   /* Given a date string and a pointer to a monthday struct, attempts to parse
@@ -66,7 +67,7 @@ int homedir_selector(const struct dirent * directory) {
    */
   char path[MAX_PATH_LENGTH];
   sprintf(path, "/home/%s/.birthday", directory->d_name);
-  if (DEBUG) fprintf(stderr, "%s\n", path);
+  debug("checking for %s", path);
   return access(path, R_OK) != -1;
 }
 
@@ -74,12 +75,12 @@ int main(int argc, char *argv[]) {
   struct monthday md;
 
   process_args(argc, argv, &md);
-  if (DEBUG) fprintf(stderr, "%d/%d\n", md.month, md.day);
+  debug("using date %d/%d", md.month, md.day);
 
   int num_directories;
   struct dirent **namelist;
   num_directories = scandir("/home", &namelist, homedir_selector, alphasort);
-  if (DEBUG) fprintf(stderr, "found %d directories\n", num_directories);
+  debug("found %d birthday files", num_directories);
 
   if (num_directories == 0) return 0;
 
@@ -89,11 +90,11 @@ int main(int argc, char *argv[]) {
   FILE *file;
   char c;
   int content_ix;
-  struct monthday parsed_monthday;
+  struct monthday parsed_md;
 
   while (directory_ix < num_directories) {
     sprintf(path, "/home/%s/.birthday", namelist[directory_ix]->d_name);
-    if (DEBUG) fprintf(stderr, "checking %s\n", path);
+    debug("checking %s", path);
     file = fopen(path, "r");
     if (file) {
       content_ix = 0;
@@ -108,15 +109,15 @@ int main(int argc, char *argv[]) {
 
       file_content[content_ix] = '\0';
 
-      if (parse_date(file_content, &parsed_monthday)) {
-        if (DEBUG) fprintf(stderr, "comparing against %d/%d\n", parsed_monthday.month, parsed_monthday.day);
+      if (parse_date(file_content, &parsed_md)) {
+        debug("comparing against %d/%d", parsed_md.month, parsed_md.day);
 
-        if (parsed_monthday.month == md.month && parsed_monthday.day == md.day) {
+        if (parsed_md.month == md.month && parsed_md.day == md.day) {
           fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
         }
       }
-      else if (DEBUG) {
-        fprintf(stderr, "unable to parse file\n");
+      else {
+        debug("unable to parse %s", path);
       }
       fclose(file);
     }
