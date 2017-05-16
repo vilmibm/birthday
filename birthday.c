@@ -17,7 +17,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define debug(format, ...) if (DEBUG) { fprintf(stderr, format, __VA_ARGS__); puts(""); }
+#define debug(format, ...) if (DEBUG) { fprintf(stderr, format "\n", __VA_ARGS__); }
 
 const int MAX_PATH_LENGTH = 40;
 const int MAX_MONTHDAY_LENGTH = 5;
