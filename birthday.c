@@ -142,6 +142,5 @@ int main(int argc, char *argv[]) {
     }
     else debug("unable to parse %s", path);
   }
-
   return 0;
 }
