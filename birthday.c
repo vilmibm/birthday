@@ -22,7 +22,7 @@
 const int MAX_PATH_LENGTH = 40;
 const int MAX_MONTHDAY_LENGTH = 5;
 
-const char DEBUG = 1;
+const char DEBUG = 0;
 
 struct monthday {
   int month;
@@ -82,6 +82,32 @@ int homedir_selector(const struct dirent * directory) {
   return access(path, R_OK) != -1;
 }
 
+char read_birthday_into(char *path, char *contents) {
+  /* given a .birthday path and a pointer to a place to write contents, write
+     the .birthday to contents. returns 1 if successful and 0 otherwise (couldn't
+     read file, bad date format) */
+  FILE *file;
+  int content_ix = 0;
+  char c;
+
+  file = fopen(path, "r");
+  if (!file) return 0;
+
+  c = getc(file);
+  while (c != EOF
+         && c != '\n'
+         && content_ix < MAX_MONTHDAY_LENGTH) {
+    contents[content_ix] = c;
+    content_ix++;
+    c = getc(file);
+  }
+
+  contents[content_ix] = '\0';
+  fclose(file);
+
+  return 1;
+}
+
 int main(int argc, char *argv[]) {
   struct monthday md;
 
@@ -98,41 +124,23 @@ int main(int argc, char *argv[]) {
   int directory_ix = 0;
   char file_content[MAX_MONTHDAY_LENGTH + 1];
   char path[MAX_PATH_LENGTH];
-  FILE *file;
-  char c;
-  int content_ix;
   struct monthday parsed_md;
 
   while (directory_ix < num_directories) {
     sprintf(path, "/home/%s/.birthday", namelist[directory_ix]->d_name);
-    debug("checking %s", path);
-    file = fopen(path, "r");
-    if (file) {
-      content_ix = 0;
-      c = getc(file);
-      while (c != EOF
-             && c != '\n'
-             && content_ix < MAX_MONTHDAY_LENGTH) {
-        file_content[content_ix] = c;
-        content_ix++;
-        c = getc(file);
-      }
-
-      file_content[content_ix] = '\0';
-
-      if (parse_date(file_content, &parsed_md)) {
-        debug("comparing against %d/%d", parsed_md.month, parsed_md.day);
-
-        if (parsed_md.month == md.month && parsed_md.day == md.day) {
-          fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
-        }
-      }
-      else {
-        debug("unable to parse %s", path);
-      }
-      fclose(file);
-    }
     directory_ix++;
+    debug("checking %s", path);
+
+    if (!read_birthday_into(path, file_content)) continue;
+
+    if (parse_date(file_content, &parsed_md)) {
+      debug("comparing against %d/%d", parsed_md.month, parsed_md.day);
+
+      if (parsed_md.month == md.month && parsed_md.day == md.day) {
+        fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
+      }
+    }
+    else debug("unable to parse %s", path);
   }
 
   return 0;
