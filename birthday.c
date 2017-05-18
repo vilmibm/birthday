@@ -12,6 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <dirent.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -22,27 +23,28 @@
 const int MAX_PATH_LENGTH = 40;
 const int MAX_MONTHDAY_LENGTH = 5;
 
-const char DEBUG = 0;
+const bool DEBUG = false;
 
 struct monthday {
   int month;
   int day;
 };
 
-char parse_date(char *date, struct monthday * md) {
+bool parse_date(char *date, struct monthday * md) {
   /* Given a date string and a pointer to a monthday struct, attempts to parse
      month and day values out of the string and store them in the struct. If
      able to parse the string, 1 is returned; 0 otherwise. */
+  // TODO strptime
   int converted, month, day;
   char extra[1];
-  if (strlen(date) > MAX_MONTHDAY_LENGTH) return 0;
+  if (strlen(date) > MAX_MONTHDAY_LENGTH) return false;
   converted = sscanf(date, "%2d/%2d%1c", &month, &day, extra);
-  if (converted != 2) return 0;
-  if (month < 1 || month > 12) return 0;
-  if (day < 1 || day > 31) return 0;
+  if (converted != 2) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
   md->month = month;
   md->day = day;
-  return 1;
+  return true;
 }
 
 void process_args(const int argc, char *argv[],
@@ -52,6 +54,7 @@ void process_args(const int argc, char *argv[],
      today's month/day values (in UTC) or parses the given month/day and
      populates the struct with that.
    */
+  // TODO can this be done in one step? putting stuff into a struct?
   time_t now;
   struct tm *utc;
   if (argc == 1) {
@@ -72,7 +75,7 @@ void process_args(const int argc, char *argv[],
   }
 }
 
-int homedir_selector(const struct dirent * directory) {
+bool homedir_selector(const struct dirent * directory) {
   /* Given a pointer to a dirent struct, return 1 if it contains a .birthday
      file we can read and 0 otherwise.
    */
@@ -82,16 +85,17 @@ int homedir_selector(const struct dirent * directory) {
   return access(path, R_OK) != -1;
 }
 
-char read_birthday_into(char *path, char *contents) {
+bool read_birthday_into(char *path, char *contents) {
   /* given a .birthday path and a pointer to a place to write contents, write
      the .birthday to contents. returns 1 if successful and 0 otherwise (couldn't
      read file, bad date format) */
+  // TODO fgets
   FILE *file;
   int content_ix = 0;
   char c;
 
   file = fopen(path, "r");
-  if (!file) return 0;
+  if (!file) return false;
 
   c = getc(file);
   while (c != EOF
@@ -105,7 +109,7 @@ char read_birthday_into(char *path, char *contents) {
   contents[content_ix] = '\0';
   fclose(file);
 
-  return 1;
+  return true;
 }
 
 int main(int argc, char *argv[]) {
@@ -140,7 +144,9 @@ int main(int argc, char *argv[]) {
         fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
       }
     }
-    else debug("unable to parse %s", path);
+    else {
+      debug("unable to parse %s", path);
+    }
   }
   return 0;
 }
