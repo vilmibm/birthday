@@ -10,6 +10,8 @@
 
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+#define _XOPEN_SOURCE
+#define _GNU_SOURCE
 #include <dirent.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -103,6 +105,7 @@ int main(int argc, char *argv[]) {
   FILE *file;
   char line[LINE_MAX];
   struct monthday parsed_md;
+  struct tm file_date;
 
   while (directory_ix < num_directories) {
     sprintf(path, "/home/%s/.birthday", namelist[directory_ix]->d_name);
@@ -121,10 +124,10 @@ int main(int argc, char *argv[]) {
       line[strlen(line)-1] = '\0';
     }
 
-    if (parse_date(line, &parsed_md)) {
-      debug("comparing against %d/%d", parsed_md.month, parsed_md.day);
+    if (strptime(line, "%m/%d", &file_date) != NULL) {
+      debug("comparing against %d/%d", file_date.tm_mon+1, file_date.tm_mday);
 
-      if (parsed_md.month == md.month && parsed_md.day == md.day) {
+      if (file_date.tm_mon+1 == md.month && file_date.tm_mday == md.day) {
         fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
       }
     }
