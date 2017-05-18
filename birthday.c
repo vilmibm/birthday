@@ -11,6 +11,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <dirent.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -20,7 +21,6 @@
 
 #define debug(format, ...) if (DEBUG) { fprintf(stderr, format "\n", __VA_ARGS__); }
 
-const int MAX_PATH_LENGTH = 40;
 const int MAX_MONTHDAY_LENGTH = 5;
 
 const bool DEBUG = false;
@@ -75,11 +75,11 @@ void process_args(const int argc, char *argv[],
   }
 }
 
-bool homedir_selector(const struct dirent * directory) {
+int homedir_selector(const struct dirent * directory) {
   /* Given a pointer to a dirent struct, return 1 if it contains a .birthday
      file we can read and 0 otherwise.
    */
-  char path[MAX_PATH_LENGTH];
+  char path[PATH_MAX];
   sprintf(path, "/home/%s/.birthday", directory->d_name);
   debug("checking for %s", path);
   return access(path, R_OK) != -1;
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 
   int directory_ix = 0;
   char file_content[MAX_MONTHDAY_LENGTH + 1];
-  char path[MAX_PATH_LENGTH];
+  char path[PATH_MAX];
   struct monthday parsed_md;
 
   while (directory_ix < num_directories) {
