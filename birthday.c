@@ -85,33 +85,6 @@ int homedir_selector(const struct dirent * directory) {
   return access(path, R_OK) != -1;
 }
 
-bool read_birthday_into(char *path, char *contents) {
-  /* given a .birthday path and a pointer to a place to write contents, write
-     the .birthday to contents. returns 1 if successful and 0 otherwise (couldn't
-     read file, bad date format) */
-  // TODO fgets
-  FILE *file;
-  int content_ix = 0;
-  char c;
-
-  file = fopen(path, "r");
-  if (!file) return false;
-
-  c = getc(file);
-  while (c != EOF
-         && c != '\n'
-         && content_ix < MAX_MONTHDAY_LENGTH) {
-    contents[content_ix] = c;
-    content_ix++;
-    c = getc(file);
-  }
-
-  contents[content_ix] = '\0';
-  fclose(file);
-
-  return true;
-}
-
 int main(int argc, char *argv[]) {
   struct monthday md;
 
@@ -126,8 +99,9 @@ int main(int argc, char *argv[]) {
   if (num_directories == 0) return 0;
 
   int directory_ix = 0;
-  char file_content[MAX_MONTHDAY_LENGTH + 1];
   char path[PATH_MAX];
+  FILE *file;
+  char line[LINE_MAX];
   struct monthday parsed_md;
 
   while (directory_ix < num_directories) {
@@ -135,9 +109,19 @@ int main(int argc, char *argv[]) {
     directory_ix++;
     debug("checking %s", path);
 
-    if (!read_birthday_into(path, file_content)) continue;
+    file = fopen(path, "r");
+    if (!file) return false;
 
-    if (parse_date(file_content, &parsed_md)) {
+    if (!fgets(line, LINE_MAX, file)) continue;
+    fclose(file);
+
+    if (strlen(line) < 3) continue;
+    if (strlen(line) > MAX_MONTHDAY_LENGTH + 1) continue; // allow for newline
+    if (line[strlen(line)-1] == '\n') {
+      line[strlen(line)-1] = '\0';
+    }
+
+    if (parse_date(line, &parsed_md)) {
       debug("comparing against %d/%d", parsed_md.month, parsed_md.day);
 
       if (parsed_md.month == md.month && parsed_md.day == md.day) {
