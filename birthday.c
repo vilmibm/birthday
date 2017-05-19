@@ -27,56 +27,6 @@ const int MAX_MONTHDAY_LENGTH = 5;
 
 const bool DEBUG = false;
 
-struct monthday {
-  int month;
-  int day;
-};
-
-bool parse_date(char *date, struct monthday * md) {
-  /* Given a date string and a pointer to a monthday struct, attempts to parse
-     month and day values out of the string and store them in the struct. If
-     able to parse the string, 1 is returned; 0 otherwise. */
-  // TODO strptime
-  int converted, month, day;
-  char extra[1];
-  if (strlen(date) > MAX_MONTHDAY_LENGTH) return false;
-  converted = sscanf(date, "%2d/%2d%1c", &month, &day, extra);
-  if (converted != 2) return false;
-  if (month < 1 || month > 12) return false;
-  if (day < 1 || day > 31) return false;
-  md->month = month;
-  md->day = day;
-  return true;
-}
-
-void process_args(const int argc, char *argv[],
-                  struct monthday * md) {
-  /* Processes argc and argv. Currently exits with the appropriate error code if
-     arguments are invalid. Populates the referenced monthday struct with
-     today's month/day values (in UTC) or parses the given month/day and
-     populates the struct with that.
-   */
-  // TODO can this be done in one step? putting stuff into a struct?
-  time_t now;
-  struct tm *utc;
-  if (argc == 1) {
-    time(&now);
-    utc = gmtime(&now);
-    md->month = utc->tm_mon + 1; // tm_mon is 0 indexed :(
-    md->day = utc->tm_mday;
-  }
-  else if (argc == 2) {
-    if (!parse_date(argv[1], md)) {
-      fprintf(stderr, "bad date: %s. use format month/day\n", argv[1]);
-      exit(1);
-    }
-  }
-  else {
-    fprintf(stderr, "bad number of args passed: %d\n", argc);
-    exit(2);
-  }
-}
-
 int homedir_selector(const struct dirent * directory) {
   /* Given a pointer to a dirent struct, return 1 if it contains a .birthday
      file we can read and 0 otherwise.
@@ -88,10 +38,26 @@ int homedir_selector(const struct dirent * directory) {
 }
 
 int main(int argc, char *argv[]) {
-  struct monthday md;
-
-  process_args(argc, argv, &md);
-  debug("using date %d/%d", md.month, md.day);
+  time_t now;
+  struct tm date;
+  struct tm *date_to_match;
+  if (argc == 1) {
+    // TODO try to clean this up
+    time(&now);
+    date_to_match = gmtime(&now);
+  }
+  else if (argc == 2) {
+    if (strptime(argv[1], "%m/%d", &date) == NULL) {
+      fprintf(stderr, "bad date: %s. use format month/day\n", argv[1]);
+      exit(1);
+    }
+    date_to_match = &date;
+  }
+  else {
+    fprintf(stderr, "bad number of args passed: %d\n", argc);
+    exit(2);
+  }
+  debug("using date %d/%d", date_to_match->tm_mon, date_to_match->tm_mday);
 
   int num_directories;
   struct dirent **namelist;
@@ -104,7 +70,6 @@ int main(int argc, char *argv[]) {
   char path[PATH_MAX];
   FILE *file;
   char line[LINE_MAX];
-  struct monthday parsed_md;
   struct tm file_date;
 
   while (directory_ix < num_directories) {
@@ -125,9 +90,10 @@ int main(int argc, char *argv[]) {
     }
 
     if (strptime(line, "%m/%d", &file_date) != NULL) {
-      debug("comparing against %d/%d", file_date.tm_mon+1, file_date.tm_mday);
+      debug("comparing against %d/%d", file_date.tm_mon, file_date.tm_mday);
 
-      if (file_date.tm_mon+1 == md.month && file_date.tm_mday == md.day) {
+      if (file_date.tm_mon == date_to_match->tm_mon
+          && file_date.tm_mday == date_to_match->tm_mday) {
         fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
       }
     }
