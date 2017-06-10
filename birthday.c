@@ -13,7 +13,9 @@
 #define _XOPEN_SOURCE
 #define _GNU_SOURCE
 #include <dirent.h>
+#include <err.h>
 #include <limits.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -21,11 +23,17 @@
 #include <time.h>
 #include <unistd.h>
 
-#define debug(format, ...) if (DEBUG) { fprintf(stderr, format "\n", __VA_ARGS__); }
-
 const int MAX_MONTHDAY_LENGTH = 5;
 
 const bool DEBUG = false;
+
+void dwarnx(const char * fmt, ...) {
+  if (!DEBUG) return;
+  va_list argp;
+  va_start(argp, fmt);
+  vwarnx(fmt, argp);
+  va_end(argp);
+}
 
 int homedir_selector(const struct dirent * directory) {
   /* Given a pointer to a dirent struct, return 1 if it contains a .birthday
@@ -33,7 +41,7 @@ int homedir_selector(const struct dirent * directory) {
    */
   char path[PATH_MAX];
   sprintf(path, "/home/%s/.birthday", directory->d_name);
-  debug("checking for %s", path);
+  dwarnx("checking for %s", path);
   return access(path, R_OK) != -1;
 }
 
@@ -57,12 +65,12 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "bad number of args passed: %d\n", argc);
     exit(2);
   }
-  debug("using date %d/%d", date_to_match->tm_mon, date_to_match->tm_mday);
+  dwarnx("using date %d/%d", date_to_match->tm_mon, date_to_match->tm_mday);
 
   int num_directories;
   struct dirent **namelist;
   num_directories = scandir("/home", &namelist, homedir_selector, alphasort);
-  debug("found %d birthday files", num_directories);
+  dwarnx("found %d birthday files", num_directories);
 
   if (num_directories == 0) return 0;
 
@@ -75,7 +83,7 @@ int main(int argc, char *argv[]) {
   while (directory_ix < num_directories) {
     sprintf(path, "/home/%s/.birthday", namelist[directory_ix]->d_name);
     directory_ix++;
-    debug("checking %s", path);
+    dwarnx("checking %s", path);
 
     file = fopen(path, "r");
     if (!file) return false;
@@ -90,7 +98,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (strptime(line, "%m/%d", &file_date) != NULL) {
-      debug("comparing against %d/%d", file_date.tm_mon, file_date.tm_mday);
+      dwarnx("comparing against %d/%d", file_date.tm_mon, file_date.tm_mday);
 
       if (file_date.tm_mon == date_to_match->tm_mon
           && file_date.tm_mday == date_to_match->tm_mday) {
@@ -98,7 +106,7 @@ int main(int argc, char *argv[]) {
       }
     }
     else {
-      debug("unable to parse %s", path);
+      dwarnx("unable to parse %s", path);
     }
   }
   return 0;
