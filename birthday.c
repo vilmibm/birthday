@@ -67,22 +67,19 @@ int main(int argc, char *argv[]) {
   }
   dwarnx("using date %d/%d", date_to_match->tm_mon, date_to_match->tm_mday);
 
-  int num_directories;
   struct dirent **namelist;
-  num_directories = scandir("/home", &namelist, homedir_selector, alphasort);
-  dwarnx("found %d birthday files", num_directories);
+  int num_dirs = scandir("/home", &namelist, homedir_selector, alphasort);
+  dwarnx("found %d birthday files", num_dirs);
 
-  if (num_directories == 0) return 0;
+  if (num_dirs == 0) return 0;
 
-  int directory_ix = 0;
   char path[PATH_MAX];
   FILE *file;
   char line[LINE_MAX];
   struct tm file_date;
 
-  while (directory_ix < num_directories) {
-    sprintf(path, "/home/%s/.birthday", namelist[directory_ix]->d_name);
-    directory_ix++;
+  while (num_dirs--) {
+    sprintf(path, "/home/%s/.birthday", namelist[num_dirs]->d_name);
     dwarnx("checking %s", path);
 
     file = fopen(path, "r");
@@ -102,12 +99,16 @@ int main(int argc, char *argv[]) {
 
       if (file_date.tm_mon == date_to_match->tm_mon
           && file_date.tm_mday == date_to_match->tm_mday) {
-        fprintf(stdout, "%s\n", namelist[directory_ix]->d_name);
+        fprintf(stdout, "%s\n", namelist[num_dirs]->d_name);
       }
     }
     else {
       dwarnx("unable to parse %s", path);
     }
+
+    free(namelist[num_dirs]);
   }
+
+  free(namelist);
   return 0;
 }
