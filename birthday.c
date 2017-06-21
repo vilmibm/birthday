@@ -50,7 +50,6 @@ int main(int argc, char *argv[]) {
   struct tm date;
   struct tm *date_to_match;
   if (argc == 1) {
-    // TODO try to clean this up
     time(&now);
     date_to_match = gmtime(&now);
   }
